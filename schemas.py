@@ -1,48 +1,52 @@
 """
-Database Schemas
+Database Schemas for MPU Preparation Platform
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model represents a collection in MongoDB.
+Collection name = lowercase of class name.
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List, Literal
 
-# Example schemas (replace with your own):
-
-class User(BaseModel):
+class MpuUser(BaseModel):
     """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
+    Collection: "mpuuser"
+    Basic user profile for MPU candidates
     """
     name: str = Field(..., description="Full name")
     email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    goal: Optional[str] = Field(None, description="Goal or target date for MPU")
+    risk_factors: Optional[List[str]] = Field(default_factory=list, description="Self-identified risk factors")
 
-class Product(BaseModel):
+class TrainingSession(BaseModel):
     """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
+    Collection: "trainingsession"
+    A training session containing questions and results
     """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+    user_id: str = Field(..., description="ID of the user taking the session")
+    status: Literal['started','submitted'] = Field('started', description="Session status")
+    questions: List[dict] = Field(default_factory=list, description="Questions asked in this session")
+    answers: Optional[List[dict]] = Field(default=None, description="User answers with timestamps")
+    score: Optional[float] = Field(default=None, description="Score percentage 0-100")
+    feedback: Optional[str] = Field(default=None, description="Textual feedback summary")
 
-# Add your own schemas here:
-# --------------------------------------------------
+class ChecklistItem(BaseModel):
+    """
+    Collection: "checklistitem"
+    Personalized checklist items for a user
+    """
+    user_id: str = Field(..., description="ID of the user")
+    title: str = Field(..., description="Checklist item title")
+    completed: bool = Field(False, description="Completion state")
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class AnalysisReport(BaseModel):
+    """
+    Collection: "analysisreport"
+    Stores AI analysis results for user inputs
+    """
+    user_id: Optional[str] = Field(default=None, description="ID of the user if available")
+    input_text: str = Field(..., description="Text provided for analysis")
+    sentiment: Literal['positive','neutral','negative'] = Field(...)
+    risk_score: float = Field(..., ge=0, le=1, description="Computed risk from 0 to 1")
+    key_themes: List[str] = Field(default_factory=list)
+    recommendations: List[str] = Field(default_factory=list)
